@@ -1,6 +1,4 @@
-//
-// Created by ÀæĞİĞİ on 2017/11/7.
-//
+
 
 #include <ctime>
 #include <exception>
@@ -12,13 +10,23 @@
 #include <cstring>
 #include "jsoncpp/json.h"
 using namespace std;
-const double EPSILON = 1e-6;
-int currBotColor; // Íæ¼ÒÖ´×ÓÑÕÉ«£¨1ÎªºÚ£¬-1Îª°×£¬ÆåÅÌ×´Ì¬ÒàÍ¬£©
-int gridInfo[8][8] = { 0 }; // ÏÈxºóy£¬¼ÇÂ¼ÆåÅÌ×´Ì¬
+const double EPSILON = 0.0000001;
+int currBotColor; // ç”µè„‘æ‰§å­é¢œè‰²ï¼ˆ1ä¸ºé»‘ï¼Œ-1ä¸ºç™½ï¼Œæ£‹ç›˜çŠ¶æ€äº¦åŒï¼‰
+int gridInfo[8][8] = { 0 }; // å…ˆxåyï¼Œè®°å½•æ£‹ç›˜çŠ¶æ€
 int blackPieceCount = 2, whitePieceCount = 2;
+const int VALUE[8][8] = {
+        20, -3, 11,  8,  8, 11, -3, 20,
+        -3, -7, -4,  1,  1, -4, -7, -3,
+        11, -4,  2,  2,  2,  2, -4, 11,
+        8,  1,  2, -3, -3,  2,  1,  8,
+        8,  1,  2, -3, -3,  2,  1,  8,
+        11, -4,  2,  2,  2,  2, -4, 11,
+        -3, -7, -4,  1,  1, -4, -7, -3,
+        20, -3, 11,  8,  8, 11, -3, 20,
+};
 
-// ÏòDirection·½Ïò¸Ä¶¯×ø±ê£¬²¢·µ»ØÊÇ·ñÔ½½ç Õâ¸öÊÇ°Ë¸ö·½ÏòÉÏµÄ
-inline bool MoveStep(int &x, int &y, int Direction){ //×¢Òâ£ºÕâÀïµ÷ÓÃÒ»´Îmove,x,yÒ²ÏàÓ¦ÒÆ¶¯ÁËÒ»²½
+// å‘Directionæ–¹å‘æ”¹åŠ¨åæ ‡ï¼Œå¹¶è¿”å›æ˜¯å¦è¶Šç•Œ è¿™ä¸ªæ˜¯å…«ä¸ªæ–¹å‘ä¸Šçš„
+inline bool MoveStep(int &x, int &y, int Direction){ //æ³¨æ„ï¼šè¿™é‡Œè°ƒç”¨ä¸€æ¬¡move,x,yä¹Ÿç›¸åº”ç§»åŠ¨äº†ä¸€æ­¥
     if (Direction == 0 || Direction == 6 || Direction == 7)
         x++;
     if (Direction == 0 || Direction == 1 || Direction == 2)
@@ -33,7 +41,7 @@ inline bool MoveStep(int &x, int &y, int Direction){ //×¢Òâ£ºÕâÀïµ÷ÓÃÒ»´Îmove,x,
 }
 
 void draw(int b[8][8]){
-    cout << "  0 1 2 3 4 5 6 7"<<endl;//Êä³öÁĞºÅ
+    cout << "  0 1 2 3 4 5 6 7"<<endl;//è¾“å‡ºåˆ—å·
     for (int i = 0; i<8; i++)
     {
         cout<<i;
@@ -42,8 +50,8 @@ void draw(int b[8][8]){
             cout << " ";
             switch (b[j][i])
             {
-                case -1:cout << "¡ğ"; break;
-                case 1:cout << "¡ñ"; break;
+                case -1:cout << "â—‹"; break;
+                case 1:cout << "â—"; break;
                 case 0:cout << " "; break;
                 default:break;
             }
@@ -56,53 +64,53 @@ void draw(int b[8][8]){
 bool ProcStep(int xPos, int yPos, int color, bool checkOnly = false) {
     int effectivePoints[8][2];
     int dir, x, y, currCount;
-    bool isValidMove = false;   //ÊÇ·ñÊÇºÏ·¨µÄÒÆ¶¯
-    if (gridInfo[xPos][yPos] != 0)   //Èç¹ûÆåÅÌÉÏÕâ¸öÎ»ÖÃÓĞ×Ó£¬ÏÂÃæ¶¼ÊÇÕâ¸öµØ·½Ã»×ÖµÄÇé¿ö
-        return false;                 //·µ»Ø²»ºÏ·¨
-    for (dir = 0; dir < 8; dir++)   // ÕâÀï±éÀú°Ë¸ö·½Ïò£¬Ã¿´Î¸ãÒ»¸ö·½Ïò ¸ãÒ»È¦ÏÂÀ´°ÑËùÓĞ·½ÏòÉÏÃæµÄ¼Ğ×¡µÄ¶Ô·½µÄÆå×Ó±£´æÔÚeffectivePointsÉÏ
+    bool isValidMove = false;   //æ˜¯å¦æ˜¯åˆæ³•çš„ç§»åŠ¨
+    if (gridInfo[xPos][yPos] != 0)   //å¦‚æœæ£‹ç›˜ä¸Šè¿™ä¸ªä½ç½®æœ‰å­ï¼Œä¸‹é¢éƒ½æ˜¯è¿™ä¸ªåœ°æ–¹æ²¡å­—çš„æƒ…å†µ
+        return false;                 //è¿”å›ä¸åˆæ³•
+    for (dir = 0; dir < 8; dir++)   // è¿™é‡Œéå†å…«ä¸ªæ–¹å‘ï¼Œæ¯æ¬¡æä¸€ä¸ªæ–¹å‘ æä¸€åœˆä¸‹æ¥æŠŠæ‰€æœ‰æ–¹å‘ä¸Šé¢çš„å¤¹ä½çš„å¯¹æ–¹çš„æ£‹å­ä¿å­˜åœ¨effectivePointsä¸Š
     {
         x = xPos;
         y = yPos;
         currCount = 0;
         while (1)
         {
-            if (!MoveStep(x, y, dir))//³¯×ÅÒ»¸ö·½ÏòÉÏÒÆ¶¯ÅĞ¶ÏÊÇ·ñ³¬½ç£¬±ß½ç¾Íbreak, Ã¿whileÒ»´Î¶¼»áÍùdir·½ÏòÇ°½øÒ»²½
+            if (!MoveStep(x, y, dir))//æœç€ä¸€ä¸ªæ–¹å‘ä¸Šç§»åŠ¨åˆ¤æ–­æ˜¯å¦è¶…ç•Œï¼Œè¾¹ç•Œå°±break, æ¯whileä¸€æ¬¡éƒ½ä¼šå¾€diræ–¹å‘å‰è¿›ä¸€æ­¥
             {
                 currCount = 0;
                 break;
             }
-            if (gridInfo[x][y] == -color)  //ÒÆ¶¯Ò»ÏÂ»¹ÊÇ¶Ô·½Æå×ÓÄÇ¾Í¶Ô·½Æå×Ó¸öÊı¼Ó1£¬°Ñ¶Ô·½µÄ¸öÊıºÍÎ»ÖÃ¼ÇÏÂÀ´±£´æµ½effectivePointsÊı×éÉÏ
+            if (gridInfo[x][y] == -color)  //ç§»åŠ¨ä¸€ä¸‹è¿˜æ˜¯å¯¹æ–¹æ£‹å­é‚£å°±å¯¹æ–¹æ£‹å­ä¸ªæ•°åŠ 1ï¼ŒæŠŠå¯¹æ–¹çš„ä¸ªæ•°å’Œä½ç½®è®°ä¸‹æ¥ä¿å­˜åˆ°effectivePointsæ•°ç»„ä¸Š
             {
-                currCount++; //Êı×Ö¾Í¼ÓÒ»
+                currCount++; //æ•°å­—å°±åŠ ä¸€
                 effectivePoints[currCount][0] = x;
                 effectivePoints[currCount][1] = y;
             }
-            else if (gridInfo[x][y] == 0) //Ã»ÓĞÆå×Ó
+            else if (gridInfo[x][y] == 0) //æ²¡æœ‰æ£‹å­
             {
                 currCount = 0;
                 break;
             }
-            else     //ÕâÖÖÇé¿öÖ¸µÄÊÇÕâ¸öÆå×ÓÊÇÎÒ·½£¬ÄÇÃ´¼ÆÊıÆ÷¾Í²»ÖÃ0ÁË£¬Ö±½ÓÌø³ö£¬ÕâÊ±ÒÑ¾­ÊÇÎÒ·½Æå×Ó¼Ğ×¡ÁËcurrCount¶àµÄµĞ·½Æå×Ó
+            else     //è¿™ç§æƒ…å†µæŒ‡çš„æ˜¯è¿™ä¸ªæ£‹å­æ˜¯æˆ‘æ–¹ï¼Œé‚£ä¹ˆè®¡æ•°å™¨å°±ä¸ç½®0äº†ï¼Œç›´æ¥è·³å‡ºï¼Œè¿™æ—¶å·²ç»æ˜¯æˆ‘æ–¹æ£‹å­å¤¹ä½äº†currCountå¤šçš„æ•Œæ–¹æ£‹å­
             {
                 break;
             }
         }
         if (currCount != 0)
         {
-            isValidMove = true;  //Èç¹û°Ë¸ö·½ÏòÖ»ÒªÓĞÒ»¸ö·½ÏòÊ¹¶Ô·½×Ó¿ÉÒÔ·´×ªµÄ£¬Õâ²½Æå¾ÍÊÇ¿ÉÒÔµÄ
-            if (checkOnly)    //Èç¹ûÖ»ÊÇ¼ì²éÕâ²½ÊÇ·ñºÏ·¨¾Í·µ»ØºÏ·¨£¬ÏÂÃæµÄ²»½øĞĞ·´×ª²Ù×÷
+            isValidMove = true;  //å¦‚æœå…«ä¸ªæ–¹å‘åªè¦æœ‰ä¸€ä¸ªæ–¹å‘ä½¿å¯¹æ–¹å­å¯ä»¥åè½¬çš„ï¼Œè¿™æ­¥æ£‹å°±æ˜¯å¯ä»¥çš„
+            if (checkOnly)    //å¦‚æœåªæ˜¯æ£€æŸ¥è¿™æ­¥æ˜¯å¦åˆæ³•å°±è¿”å›åˆæ³•ï¼Œä¸‹é¢çš„ä¸è¿›è¡Œåè½¬æ“ä½œ
                 return true;
-            if (color == 1) //Èç¹ûÊÇºÚÆå
+            if (color == 1) //å¦‚æœæ˜¯é»‘æ£‹
             {
                 blackPieceCount += currCount;
-                whitePieceCount -= currCount;   //¸Ä±äºÚ°×Æå×Ó¸öÊı
+                whitePieceCount -= currCount;   //æ”¹å˜é»‘ç™½æ£‹å­ä¸ªæ•°
             }
-            else  //°×Æå
+            else  //ç™½æ£‹
             {
                 whitePieceCount += currCount;
                 blackPieceCount -= currCount;
             }
-            while (currCount > 0)  //ÕâÀï°Ñ¼ÓÔÚÖĞ¼äµÄ¶Ô·½Æå×Ó·­×ª¹ıÈ¥
+            while (currCount > 0)  //è¿™é‡ŒæŠŠåŠ åœ¨ä¸­é—´çš„å¯¹æ–¹æ£‹å­ç¿»è½¬è¿‡å»
             {
                 x = effectivePoints[currCount][0];
                 y = effectivePoints[currCount][1];
@@ -111,7 +119,7 @@ bool ProcStep(int xPos, int yPos, int color, bool checkOnly = false) {
             }
         }
     }
-    if (isValidMove) //Èç¹ûÕâ¸öµØ·½ÊÇºÏ·¨µÄ×ø±ê£¬ÄÇÃ´ÏÂÃæ¾Í¶ÔÕâÅÌÆåµÄºÚ°×½øĞĞ¸Ä±ä+1
+    if (isValidMove) //å¦‚æœè¿™ä¸ªåœ°æ–¹æ˜¯åˆæ³•çš„åæ ‡ï¼Œé‚£ä¹ˆä¸‹é¢å°±å¯¹è¿™ç›˜æ£‹çš„é»‘ç™½è¿›è¡Œæ”¹å˜+1
     {
         gridInfo[xPos][yPos] = color;
         if (color == 1)
@@ -126,18 +134,19 @@ bool ProcStep(int xPos, int yPos, int color, bool checkOnly = false) {
 
 class UCTreeNode {
 public:
-    int board[8][8];  //  µ±Ç°ÆåÅÌ²¼¾Ö
-    UCTreeNode *vpChildren_i[64];   //º¢×Ó½áµã²¼¾Ö
+    int board[8][8];  //  å½“å‰æ£‹ç›˜å¸ƒå±€
+    UCTreeNode *vpChildren_i[64];   //å­©å­ç»“ç‚¹å¸ƒå±€
     bool isLeaf_i=true;
     double nVisits_i=0;
     double totValue_i=0;
     int childNum=0;
     int xPos;
     int yPos;
-    int position[64][2];    //¿ÉÏÂ×ÓÎ»ÖÃ
+    int position[64][2];    //å¯ä¸‹å­ä½ç½®
     int blackNum=2;
     int whiteNum=2;
-    int colorToPlay; // 1ÊÇºÚ¡£-1ÊÇ°×  ¾ÍÊÇ±¾¾ÖÃæ×îºóÒ»¸öÆå×ÓÂä×ÓµÄÑÕÉ«
+    int colorToPlay; // 1æ˜¯é»‘ã€‚-1æ˜¯ç™½  å°±æ˜¯æœ¬å±€é¢æœ€åä¸€ä¸ªæ£‹å­è½å­çš„é¢œè‰²
+
     UCTreeNode() {
         for(int i=0; i<8 ;i++)
             for (int j = 0; j <8; j++) {
@@ -145,23 +154,26 @@ public:
             }
 
     }  // default constructor
+
     void init(){
         for (int i = 0; i <8; i++) {
             memcpy(board[i],gridInfo[i], sizeof(board[i]));
         }
         blackNum=blackPieceCount;
         whiteNum=whitePieceCount;
-        colorToPlay=-currBotColor; //°ÑÍæ¼ÒÏÂÍêµÄÆå¾Ö×´Ì¬¼ÇÂ¼ÏÂÀ´
+        colorToPlay=-currBotColor; //æŠŠç©å®¶ä¸‹å®Œçš„æ£‹å±€çŠ¶æ€è®°å½•ä¸‹æ¥
     }
-    void inherit(UCTreeNode preNode){    //°ÑÆåÅÌ¸´ÖÆµ½µ±Ç°½áµãÀ´
+
+    void inherit(UCTreeNode preNode){    //æŠŠæ£‹ç›˜å¤åˆ¶åˆ°å½“å‰ç»“ç‚¹æ¥
         for (int i = 0; i <8; i++) {
             memcpy(board[i],preNode.board[i], sizeof(board[i]));
         }
         blackNum=preNode.blackNum;
         whiteNum=preNode.whiteNum;
-        colorToPlay=-preNode.colorToPlay;
+
 
     }
+
     void copy(UCTreeNode &temp){
         for (int i = 0; i <8; i++) {
             memcpy(temp.board[i],board[i], sizeof(board[i]));
@@ -172,61 +184,63 @@ public:
         temp.xPos=xPos;
         temp.yPos=yPos;
     }
+
     bool isLeaf() const {
         return isLeaf_i;
     }
+
     bool ProcStep(int xP, int yP,int color, bool checkOnly = false) {
         //draw(board);
         int effectivePoints[8][2];
         int dir, x, y, currCount;
-        bool isValidMove = false;   //ÊÇ·ñÊÇºÏ·¨µÄÒÆ¶¯
-        if (board[xP][yP] != 0)   //Èçy¹ûÆåÅÌÉÏÕâ¸öÎ»ÖÃÓĞ×Ó£¬ÏÂÃæ¶¼ÊÇÕâ¸öµØ·½Ã»×ÖµÄÇé¿ö
-            return false;//·µ»Ø²»ºÏ·¨
-        for (dir = 0; dir < 8; dir++)   // ÕâÀï±éÀú°Ë¸ö·½Ïò£¬Ã¿´Î¸ãÒ»¸ö·½Ïò ¸ãÒ»È¦ÏÂÀ´°ÑËùÓĞ·½ÏòÉÏÃæµÄ¼Ğ×¡µÄ¶Ô·½µÄÆå×Ó±£´æÔÚeffectivePointsÉÏ
+        bool isValidMove = false;   //æ˜¯å¦æ˜¯åˆæ³•çš„ç§»åŠ¨
+        if (board[xP][yP] != 0)   //å¦‚yæœæ£‹ç›˜ä¸Šè¿™ä¸ªä½ç½®æœ‰å­ï¼Œä¸‹é¢éƒ½æ˜¯è¿™ä¸ªåœ°æ–¹æ²¡å­—çš„æƒ…å†µ
+            return false;//è¿”å›ä¸åˆæ³•
+        for (dir = 0; dir < 8; dir++)   // è¿™é‡Œéå†å…«ä¸ªæ–¹å‘ï¼Œæ¯æ¬¡æä¸€ä¸ªæ–¹å‘ æä¸€åœˆä¸‹æ¥æŠŠæ‰€æœ‰æ–¹å‘ä¸Šé¢çš„å¤¹ä½çš„å¯¹æ–¹çš„æ£‹å­ä¿å­˜åœ¨effectivePointsä¸Š
         {
             x = xP;
             y = yP;
             currCount = 0;
             while (1)
             {
-                if (!MoveStep(x, y, dir))//³¯×ÅÒ»¸ö·½ÏòÉÏÒÆ¶¯ÅĞ¶ÏÊÇ·ñ³¬½ç£¬±ß½ç¾Íbreak, Ã¿whileÒ»´Î¶¼»áÍùdir·½ÏòÇ°½øÒ»²½
+                if (!MoveStep(x, y, dir))//æœç€ä¸€ä¸ªæ–¹å‘ä¸Šç§»åŠ¨åˆ¤æ–­æ˜¯å¦è¶…ç•Œï¼Œè¾¹ç•Œå°±break, æ¯whileä¸€æ¬¡éƒ½ä¼šå¾€diræ–¹å‘å‰è¿›ä¸€æ­¥
                 {
                     currCount = 0;
                     break;
                 }
-                if (board[x][y] == -color)   //×¢ÒâÕâÀïÔÚÁ½¸öº¯ÊıÖĞÔËĞĞÑÕÉ«ÓĞÇø±ğ
-                    //ÒÆ¶¯Ò»ÏÂ»¹ÊÇ¶Ô·½Æå×ÓÄÇ¾Í¶Ô·½Æå×Ó¸öÊı¼Ó1£¬°Ñ¶Ô·½µÄ¸öÊıºÍÎ»ÖÃ¼ÇÏÂÀ´±£´æµ½effectivePointsÊı×éÉÏ
+                if (board[x][y] == -color)   //æ³¨æ„è¿™é‡Œåœ¨ä¸¤ä¸ªå‡½æ•°ä¸­è¿è¡Œé¢œè‰²æœ‰åŒºåˆ«
+                    //ç§»åŠ¨ä¸€ä¸‹è¿˜æ˜¯å¯¹æ–¹æ£‹å­é‚£å°±å¯¹æ–¹æ£‹å­ä¸ªæ•°åŠ 1ï¼ŒæŠŠå¯¹æ–¹çš„ä¸ªæ•°å’Œä½ç½®è®°ä¸‹æ¥ä¿å­˜åˆ°effectivePointsæ•°ç»„ä¸Š
                 {
-                    currCount++; //Êı×Ö¾Í¼ÓÒ»
+                    currCount++; //æ•°å­—å°±åŠ ä¸€
                     effectivePoints[currCount][0] = x;
                     effectivePoints[currCount][1] = y;
                 }
-                else if (board[x][y] == 0) //Ã»ÓĞÆå×Ó
+                else if (board[x][y] == 0) //æ²¡æœ‰æ£‹å­
                 {
                     currCount = 0;
                     break;
                 }
-                else     //ÕâÖÖÇé¿öÖ¸µÄÊÇÕâ¸öÆå×ÓÊÇÎÒ·½£¬ÄÇÃ´¼ÆÊıÆ÷¾Í²»ÖÃ0ÁË£¬Ö±½ÓÌø³ö£¬ÕâÊ±ÒÑ¾­ÊÇÎÒ·½Æå×Ó¼Ğ×¡ÁËcurrCount¶àµÄµĞ·½Æå×Ó
+                else     //è¿™ç§æƒ…å†µæŒ‡çš„æ˜¯è¿™ä¸ªæ£‹å­æ˜¯æˆ‘æ–¹ï¼Œé‚£ä¹ˆè®¡æ•°å™¨å°±ä¸ç½®0äº†ï¼Œç›´æ¥è·³å‡ºï¼Œè¿™æ—¶å·²ç»æ˜¯æˆ‘æ–¹æ£‹å­å¤¹ä½äº†currCountå¤šçš„æ•Œæ–¹æ£‹å­
                 {
                     break;
                 }
             }
             if (currCount != 0)
             {
-                isValidMove = true;  //Èç¹û°Ë¸ö·½ÏòÖ»ÒªÓĞÒ»¸ö·½ÏòÊ¹¶Ô·½×Ó¿ÉÒÔ·´×ªµÄ£¬Õâ²½Æå¾ÍÊÇ¿ÉÒÔµÄ
-                if (checkOnly)    //Èç¹ûÖ»ÊÇ¼ì²éÕâ²½ÊÇ·ñºÏ·¨¾Í·µ»ØºÏ·¨£¬ÏÂÃæµÄ²»½øĞĞ·´×ª²Ù×÷
+                isValidMove = true;  //å¦‚æœå…«ä¸ªæ–¹å‘åªè¦æœ‰ä¸€ä¸ªæ–¹å‘ä½¿å¯¹æ–¹å­å¯ä»¥åè½¬çš„ï¼Œè¿™æ­¥æ£‹å°±æ˜¯å¯ä»¥çš„
+                if (checkOnly)    //å¦‚æœåªæ˜¯æ£€æŸ¥è¿™æ­¥æ˜¯å¦åˆæ³•å°±è¿”å›åˆæ³•ï¼Œä¸‹é¢çš„ä¸è¿›è¡Œåè½¬æ“ä½œ
                     return true;
-                if (color == 1) //Èç¹ûÊÇºÚÆå,Ò²¾ÍÊÇÏÂÒ»²½ÆåÊÇ°×Æå£¬ÄÇÃ´°ÑºÚ×Ó·­³É°×Æå
+                if (color == 1) //å¦‚æœæ˜¯é»‘æ£‹,ä¹Ÿå°±æ˜¯ä¸‹ä¸€æ­¥æ£‹æ˜¯ç™½æ£‹ï¼Œé‚£ä¹ˆæŠŠé»‘å­ç¿»æˆç™½æ£‹
                 {
                     whiteNum -= currCount;
-                    blackNum += currCount;   //¸Ä±äºÚ°×Æå×Ó¸öÊı
+                    blackNum += currCount;   //æ”¹å˜é»‘ç™½æ£‹å­ä¸ªæ•°
                 }
-                else  //°×Æå
+                else  //ç™½æ£‹
                 {
                     whiteNum += currCount;
                     blackNum -= currCount;
                 }
-                while (currCount > 0)  //ÕâÀï°Ñ¼ÓÔÚÖĞ¼äµÄ¶Ô·½Æå×Ó·­×ª¹ıÈ¥
+                while (currCount > 0)  //è¿™é‡ŒæŠŠåŠ åœ¨ä¸­é—´çš„å¯¹æ–¹æ£‹å­ç¿»è½¬è¿‡å»
                 {
                     x = effectivePoints[currCount][0];
                     y = effectivePoints[currCount][1];
@@ -235,7 +249,7 @@ public:
                 }
             }
         }
-        if (isValidMove) //Èç¹ûÕâ¸öµØ·½ÊÇºÏ·¨µÄ×ø±ê£¬ÄÇÃ´ÏÂÃæ¾Í¶ÔÕâÅÌÆåµÄºÚ°×½øĞĞ¸Ä±ä+1
+        if (isValidMove) //å¦‚æœè¿™ä¸ªåœ°æ–¹æ˜¯åˆæ³•çš„åæ ‡ï¼Œé‚£ä¹ˆä¸‹é¢å°±å¯¹è¿™ç›˜æ£‹çš„é»‘ç™½è¿›è¡Œæ”¹å˜+1
         {
             board[xP][yP] = color;
             if (color == 1)
@@ -247,10 +261,11 @@ public:
         else
             return false;
     }
+
     int PossiblePos(){
         int posCount=0;
         for (int y = 0; y < 8; y++)
-            for (int x = 0; x < 8; x++)  //±éÀúÆåÅÌÕÒ³ö¿ÉÒÔÂä×ÓµÄµã£¬
+            for (int x = 0; x < 8; x++)  //éå†æ£‹ç›˜æ‰¾å‡ºå¯ä»¥è½å­çš„ç‚¹ï¼Œ
                 if (ProcStep(x, y,-colorToPlay, true))
                 {
                     position[posCount][0] = x;
@@ -259,145 +274,154 @@ public:
         childNum=posCount;
         return posCount;
     }
-    int selectAction()  {     //Ñ¡ÔñÒ»¸ö×Ó½Úµã£¬ÏÂÁË×ÓÈ¥¸ü¸ÄËûµÄ¾ÖÃæ
-        //cout<<"½øÈëselectAction"<<endl;
-        //assert(!isLeaf_i); //²»ÊÇÒ¶×Ó½áµã
-        cout<<"seclectÀïÊÇ·ñÊÇÒ¶×Ó½áµã£º"<<isLeaf_i<<endl;
+
+    int selectAction() {     //é€‰æ‹©ä¸€ä¸ªå­èŠ‚ç‚¹ï¼Œä¸‹äº†å­å»æ›´æ”¹ä»–çš„å±€é¢
+
+        //assert(!isLeaf_i); //ä¸æ˜¯å¶å­ç»“ç‚¹
         int selected = 0;
         childNum=PossiblePos();
-        //cout<<"childNum"<<childNum<<endl;
+        //cout<<"childNumï¼šï¼š"<<childNum<<endl;
         if(childNum==0)
             return -1;
         double bestValue = -numeric_limits<double>::max();
-
-        for (int k = 0; k < childNum; k++)  //±éÀún¸öº¢×Ó½áµã
+        //cout<<"æ¯ä¸ªå­©å­è®¡ç®—çš„å€¼æ˜¯ï¼š"<<endl;
+        for (int k = 0; k < childNum; k++)  //éå†nä¸ªå­©å­ç»“ç‚¹
         {
-
             UCTreeNode *pCur = vpChildren_i[k]; // ptr to current child node
-            pCur->totValue_i=pCur->colorToPlay==currBotColor?pCur->totValue_i:pCur->nVisits_i-pCur->totValue_i;
             double uctValue = pCur->totValue_i / (pCur->nVisits_i + EPSILON) +
                               sqrt(log(nVisits_i + 1) / (pCur->nVisits_i + EPSILON));
-            //cout<<"UCT"<<uctValue<<endl;
+            //pCur->Value();
+            //cout<<"UCT:"<<uctValue<<endl;
             if (uctValue >= bestValue) {
                 selected = k;
                 bestValue = uctValue;
             }
+
         } // for loop
 
-        //cout<<"º¢×ÓÓĞ£º"<<childNum<<endl;
-        //cout<<"UCTÑ¡ÔñµÄ½áµãÊÇ£º"<<selected<<".¸Ã½ÚµãµÄÖµÊÇ£º";
+        //cout<<"å­©å­æœ‰ï¼š"<<childNum<<endl;
+        //cout<<"UCTé€‰æ‹©çš„ç»“ç‚¹æ˜¯ï¼š"<<selected<<".è¯¥èŠ‚ç‚¹çš„å€¼æ˜¯ï¼š";
         //vpChildren_i[selected]->Value();
-        //cout<<"Ñ¡ÔñµÄµãÊÇ:"<<vpChildren_i[selected]->xPos<<vpChildren_i[selected]->yPos<<endl;
-        vpChildren_i[selected]->inherit(*this);//°Ñ¸¸½ÚµãµÄ¾ÖÃæ¸øÕâ¸ö×Ó½Úµã
-        //ÕâÀïÊÇ±ä¶¯ºóµÄÏÂÒ»²½Æå¾ÖÃæ
-        //cout<<"º¢×Ó½áµãÑ¡µÚ"<<selected<<";"<<position[selected][0]<<position[selected][1]<<endl;
+        //cout<<"é€‰æ‹©çš„ç‚¹æ˜¯:"<<vpChildren_i[selected]->xPos<<vpChildren_i[selected]->yPos<<endl;
+        vpChildren_i[selected]->inherit(*this);//æŠŠçˆ¶èŠ‚ç‚¹çš„å±€é¢ç»™è¿™ä¸ªå­èŠ‚ç‚¹
+        //è¿™é‡Œæ˜¯å˜åŠ¨åçš„ä¸‹ä¸€æ­¥æ£‹å±€é¢
+
         vpChildren_i[selected]->ProcStep(position[selected][0],position[selected][1],vpChildren_i[selected]->colorToPlay);
 
-        return selected; //ÕÒ³öuct×î´óµÄ½áµã·µ»Ø
+        return selected; //æ‰¾å‡ºuctæœ€å¤§çš„ç»“ç‚¹è¿”å›
 
     } // selectAction
-    void expand() {    // À©Õ¹¿ÉÒÔÏÂ×ÓµÄ½áµã¾ÖÃæ£¬²»ÓÃÏÈ²¼ºÃ¾Ö£¬ºóÃæÑ¡ÔñÄÄ¸ö²¼ÄÄ¸ö
-         if (!isLeaf_i)
-             return;
+
+    void expand() {    // æ‰©å±•å¯ä»¥ä¸‹å­çš„ç»“ç‚¹å±€é¢ï¼Œä¸ç”¨å…ˆå¸ƒå¥½å±€ï¼Œåé¢é€‰æ‹©å“ªä¸ªå¸ƒå“ªä¸ª
+        if (!isLeaf_i)
+            return;
 
         childNum=PossiblePos();
-        for (int k = 0; k < childNum; k++){     //°ÑÃ¿¸ö×Ó½Úµã¾ÖÃæ¸ãºÃÆåÅÌ²¼¾Ö
+        for (int k = 0; k < childNum; k++){     //æŠŠæ¯ä¸ªå­èŠ‚ç‚¹å±€é¢æå¥½æ£‹ç›˜å¸ƒå±€
             vpChildren_i[k] = new UCTreeNode();
-              //×Ó¾ÖÃæÏÂ×ÓºóÆå¾Ö»á·¢Éú±ä»¯µÄ£¬²»ÄÜÔÚÕâÀïÏÈ±ä
+            //å­å±€é¢ä¸‹å­åæ£‹å±€ä¼šå‘ç”Ÿå˜åŒ–çš„ï¼Œä¸èƒ½åœ¨è¿™é‡Œå…ˆå˜
             vpChildren_i[k]->xPos=position[k][0];
-            vpChildren_i[k]->yPos=position[k][1];     //±¾´Î¼´½«Âä×ÓµãxºÍy¼ÇÂ¼ÏÂÀ´
+            vpChildren_i[k]->yPos=position[k][1];     //æœ¬æ¬¡å³å°†è½å­ç‚¹xå’Œyè®°å½•ä¸‹æ¥
             vpChildren_i[k]->colorToPlay=-colorToPlay;
-            //cout<<"µÚ"<<k<<"¸öº¢×ÓµÄÏÂ²½ÊÇ£º"<<vpChildren_i[k]->xPos<<vpChildren_i[k]->yPos<<endl;
+            //cout<<"ç¬¬"<<k<<"ä¸ªå­©å­çš„ä¸‹æ­¥æ˜¯ï¼š"<<vpChildren_i[k]->xPos<<vpChildren_i[k]->yPos<<endl;
         }
-        cout<<endl;
-        cout<<"=expand="<<endl;
-        cout<<"º¢×Ó½áµãÎ»ÖÃ£º";
-        for (int i = 0; i < childNum; i++) {
-            cout<<position[i][0]<<position[i][1]<<",";
-            cout<<vpChildren_i[i]->xPos<<vpChildren_i[i]->yPos<<"  ";
-        }
-        cout<<"=expand end="<<endl;
-        cout<<endl;
+
 
         if(childNum!=0)
-             isLeaf_i=false;
-    } // expand
-    int simulation() {  //·µ»Ø×îºóµÄ½á¹ûÖµ
+            isLeaf_i=false;
+    }
+
+    int simulation() {  //è¿”å›æœ€åçš„ç»“æœå€¼
+        int zoneNum=0;
         UCTreeNode *temp=new UCTreeNode();
         copy(*temp);
-        while (temp->PossiblePos()!=0) {
-            int r=rand()%temp->PossiblePos();
-            int x=temp->position[r][0];
-            int y=temp->position[r][1];
-            temp->ProcStep(x,y,-temp->colorToPlay);  //Ô­À´ÊÇ-µÄ£¬¸ãÁËºÃ¾Ã==
+        while (temp->blackNum+temp->whiteNum<64) {
+            int posnum=temp->PossiblePos();
+
+            if(posnum!=0) {
+                int max=-10;
+                int tempi;
+
+                //int r = rand() % posnum;
+                for(int i=0;i<posnum;i++){
+                    int x1 = temp->position[i][0];
+                    int y1 = temp->position[i][1];
+                    if(VALUE[x1][y1]>max){
+                        max=VALUE[x1][y1];
+                        tempi=i;
+                    }
+                }
+
+                int x = temp->position[tempi][0];
+                int y = temp->position[tempi][1];
+
+                temp->ProcStep(x, y, -temp->colorToPlay);  //åŸæ¥æ˜¯-çš„ï¼Œæäº†å¥½ä¹…==
+                //draw(temp->board);
+            } else
+                zoneNum++;
+            if(zoneNum>1) break;   //é¿å…ä¸¤è¾¹éƒ½æ²¡å­å¯ä¸‹ï¼Œä¸€ç›´å¾ªç¯çš„æƒ…å†µ
             temp->colorToPlay=-temp->colorToPlay;
-            //draw(temp->board);
         }
-
-        if((colorToPlay==-1 && temp->whiteNum > temp->blackNum) || (colorToPlay==1 && temp->whiteNum < temp->blackNum) )
-            return 1;  //Ä£ÄâÊ±µ±Ç°×ÓÊÇ°××Ó»òÕßºÚ×Ó£¬µ±Ç°Ê¤
+        //cout<<"æ¨¡æ‹Ÿè½å­ï¼šé»‘å­"<<temp->blackNum<<",ç™½å­ï¼š"<<temp->whiteNum<<endl;
+        if((currBotColor==-1 && temp->whiteNum > temp->blackNum) || (currBotColor==1 && temp->whiteNum < temp->blackNum) )
+            return 1;  //ç”µè„‘æ˜¯ä»€ä¹ˆé¢œè‰²ï¼Œæœ€åè¿™ä¸ªé¢œè‰²å¤šå°±æ˜¯èƒœåˆ©ã€‚
         else
-            return 0;
+            return 0; //å¥½å§ï¼Œè¾“å’Œå¹³å±€éƒ½è¿”å›0ï¼›
 
-    } // rollout
-    void updateStats(int value) {
+    }
+
+    void updateStats(double value) {
+
         nVisits_i++;         // increment the number of visits
         totValue_i += value; // update the total value for all visits
     }
+
     void iterate() {
         stack<UCTreeNode *> visited;
         UCTreeNode *pCur = this;
         visited.push(this);
-        int action = 0; // next selected action
-        //cout<<"Ñ¡ÔñµÄµãÊÇ·ñÊÇÒ¶×Ó½áµã£º"<<pCur->isLeaf_i<<endl;
+        int action = 0;
+        //cout<<"é€‰æ‹©çš„ç‚¹æ˜¯å¦æ˜¯å¶å­ç»“ç‚¹ï¼š"<<pCur->isLeaf_i<<endl;
         while (!pCur->isLeaf()) {
             action = pCur->selectAction();
-            cout<<"Ñ¡ÔñµÚ"<<action<<"º¢×Ó½áµãÍùÏÂ×ß"<<pCur->vpChildren_i[action]->xPos<<pCur->vpChildren_i[action]->yPos<<endl;
-            pCur->vpChildren_i[action]->Value();
             pCur = pCur->vpChildren_i[action];
-
             visited.push(pCur);
         }
-        //cout<<"ÒÔÉÏ´Ó¸úÍùÏÂ×ßµ½Ò¶×Ó½áµã"<<endl;
+        //cout<<"ä»¥ä¸Šä»è·Ÿå¾€ä¸‹èµ°åˆ°å¶å­ç»“ç‚¹"<<endl;
 
-        //µ«ÊÇÕâÀï¸ù½ÚµãÔÚÖ÷³ÌĞòÖĞÀ©Õ¹ÁËÏÈ
-        if(pCur->nVisits_i>50){//Èç¹û¸Ã½áµã±»·ÃÎÊ¹ıÁË£¬¾ÍÈ¥À©Õ¹ËûµÄÒ¶×Ó½áµã·ÃÎÊ
-           pCur->expand();
-            cout<<"Ò¶½áµãÀ©Õ¹ºóº¢×Ó½áµãÎ»ÖÃ£º";
-            for (int i = 0; i < pCur->childNum; i++) {
-                cout<<pCur->position[i][0]<<pCur->position[i][1]<<",";
-                cout<<pCur->vpChildren_i[i]->xPos<<pCur->vpChildren_i[i]->yPos<<"  ";
-            }
-           action = pCur->selectAction();
-           if(action==-1){
-               cout<<"action=-1,Æå¾Ö²»ÄÜÔÙÏÂ×ÓÁË";
-               return;
-           }
-           pCur = pCur->vpChildren_i[action];
+        //ä½†æ˜¯è¿™é‡Œæ ¹èŠ‚ç‚¹åœ¨ä¸»ç¨‹åºä¸­æ‰©å±•äº†å…ˆ
+        if(pCur->nVisits_i>75){//å¦‚æœè¯¥ç»“ç‚¹è¢«æ¨¡æ‹Ÿ50æ¬¡ï¼Œå°±å»æ‰©å±•ä»–çš„å¶å­ç»“ç‚¹è®¿é—®
+            pCur->expand();
+            action = pCur->selectAction();
+            if(action==-1)
+                return;
+            pCur = pCur->vpChildren_i[action];
+            visited.push(pCur);
         }
-        visited.push(pCur);
+
         double value = pCur->simulation();
         //pCur->Value();
-        //cout<<"Ä£ÄâÏÂÆåµÃµ½µÄÖµÊÇ£º"<<value<<endl;
+        //cout<<"æ¨¡æ‹Ÿä¸‹æ£‹å¾—åˆ°çš„å€¼æ˜¯ï¼š"<<value<<endl;
         while (!visited.empty()) {
             pCur = visited.top();
-            value=pCur->colorToPlay==currBotColor?value:1-value;
-            pCur->updateStats(value);
+            //å¦‚æœå³å°†ä¸‹å­çš„é¢œè‰²æ˜¯ç”µè„‘çš„é¢œè‰²ï¼Œç”µè„‘èƒœï¼Œè¿™ä¸ªå­åŠ 1ï¼Œå¦åˆ™åŠ 0
+            if(pCur->colorToPlay==-currBotColor)
+                pCur->updateStats(1.0-value);
+            else
+                pCur->updateStats(value);
             visited.pop();
         }
 
     }
-    int bestAction() { //·µ»Øutc×î´óµÄÄÇ¸öÖµ
+
+    int bestAction() { //è¿”å›utcæœ€å¤§çš„é‚£ä¸ªå€¼
         int selected = 0;
         double bestValue = 0;
         for (int k = 0; k < childNum; ++k) {
-            cout<<"children :"<<childNum;
-
             UCTreeNode *pCur = vpChildren_i[k]; // ptr to current child node
-            pCur->Value();
             assert(0 != pCur);
-            double expValue =pCur->totValue_i/pCur->nVisits_i;
-            cout<<"value:"<<expValue<<endl;
+            double expValue = pCur->totValue_i / pCur->nVisits_i;
+
             if (expValue >= bestValue) {
                 selected = k;
                 bestValue = expValue;
@@ -405,108 +429,85 @@ public:
         } // for loop
         return selected;
     } // bestAction
+
     void Value() const{
         cout << totValue_i << "/" << nVisits_i << endl;
     }
+
 };
-
-
-/*int main(){
-    srand((unsigned)time(0));
-    gridInfo[3][4] = gridInfo[4][3] = 1;  //|°×|ºÚ|
-    gridInfo[3][3] = gridInfo[4][4] = -1; //|ºÚ|°×|
-    //draw(gridInfo);
-    currBotColor = 1;  //Íæ¼ÒÎªºÚ×Ó1£¬µçÄÔÊÇ°××Ó-1
-    int px=4,py=5;       //ÕâÀïÄ£ÄâÁËÍæ¼ÒÂä×ÓÔÚ£¨3£¬2£©ÉÏ,ËûÊµ¼ÊÉÏÊÇÊú×ÅµÚ3¸ö£¬ºá×ÅµÚ2¸ö
-    ProcStep(px,py,currBotColor);     //Âä×ÓºóÊµÏÖÆå¾Ö¸Ä±ä
-    //draw(gridInfo);
-
-    //ÏÂÃæÊÇµçÄÔÏÂ×ÓµÄ¹ı³Ì
-    UCTreeNode tree;
-    tree.init(); //µ±Ç°Æå¾Öµ±ÏÂÀ´
-
-    if(tree.PossiblePos()==0) cout<<"Æå¾Ö½áÊø"<<endl;
-
-    for (int i=0;i<20;i++) {
-        //cout<<"i:"<<i<<endl;
-        tree.iterate();
-        //cout<<endl;
-    }
-    int bestAction = tree.bestAction();
-    int x=tree.vpChildren_i[bestAction]->xPos;
-    int y=tree.vpChildren_i[bestAction]->yPos;
-    cout<<"×îÖÕ½á¹û"<<x<<y<<endl;
-    return 0;
-}*/
-
-
 
 int main()
 {
     int x, y;
     srand((unsigned)time(0));
-    // ³õÊ¼»¯ÆåÅÌ
-    gridInfo[3][4] = gridInfo[4][3] = 1;  //|°×|ºÚ|
-    gridInfo[3][3] = gridInfo[4][4] = -1; //|ºÚ|°×|
+    // åˆå§‹åŒ–æ£‹ç›˜
+    gridInfo[3][4] = gridInfo[4][3] = 1;  //|ç™½|é»‘|
+    gridInfo[3][3] = gridInfo[4][4] = -1; //|é»‘|ç™½|
 
-    // ¶ÁÈëJSON
+    // è¯»å…¥JSON
     string str;
     getline(cin, str);
     Json::Reader reader;
-    Json::Value input; //ÈıÎ¬£¬±£´æn¸ö»ØºÏË«·½µÄÆå×Ó×ø±ê
+    Json::Value input; //ä¸‰ç»´ï¼Œä¿å­˜nä¸ªå›åˆåŒæ–¹çš„æ£‹å­åæ ‡
     reader.parse(str, input);
 
-    // ·ÖÎö×Ô¼ºÊÕµ½µÄÊäÈëºÍ×Ô¼º¹ıÍùµÄÊä³ö£¬²¢»Ö¸´×´Ì¬
-    int turnID = input["responses"].size();//´ó¸Å¾ÍÊÇµÚ¼¸»ØºÏµÄÒâË¼
+    // åˆ†æè‡ªå·±æ”¶åˆ°çš„è¾“å…¥å’Œè‡ªå·±è¿‡å¾€çš„è¾“å‡ºï¼Œå¹¶æ¢å¤çŠ¶æ€
+    int turnID = input["responses"].size();//å¤§æ¦‚å°±æ˜¯ç¬¬å‡ å›åˆçš„æ„æ€
 
-    currBotColor = input["requests"][(Json::Value::UInt) 0]["x"].asInt() < 0 ? 1 : -1; // µÚÒ»»ØºÏÊÕµ½×ø±êÊÇ-1, -1£¬ËµÃ÷ÎÒÊÇºÚ·½
-    //cout<<"µçÄÔÑÕÉ«ÊÇ£º"<<currBotColor<<endl;
-    for (int i = 0; i < turnID; i++)  //ÒÔÍù»ØºÏµÄÂä×ÓĞÅÏ¢ÒÑ¾­±£´æµ½È«¾Ö±äÁ¿gridInfoÀïÃæÁË
+    currBotColor = input["requests"][(Json::Value::UInt) 0]["x"].asInt() < 0 ? 1 : -1; // ç¬¬ä¸€å›åˆæ”¶åˆ°åæ ‡æ˜¯-1, -1ï¼Œè¯´æ˜æˆ‘æ˜¯é»‘æ–¹
+    //cout<<"ç”µè„‘é¢œè‰²æ˜¯ï¼š"<<currBotColor<<endl;
+    for (int i = 0; i < turnID; i++)  //ä»¥å¾€å›åˆçš„è½å­ä¿¡æ¯å·²ç»ä¿å­˜åˆ°å…¨å±€å˜é‡gridInfoé‡Œé¢äº†
     {
-        // ¸ù¾İÕâĞ©ÊäÈëÊä³öÖğ½¥»Ö¸´×´Ì¬µ½µ±Ç°»ØºÏ
+        // æ ¹æ®è¿™äº›è¾“å…¥è¾“å‡ºé€æ¸æ¢å¤çŠ¶æ€åˆ°å½“å‰å›åˆ
         x = input["requests"][i]["x"].asInt();
         y = input["requests"][i]["y"].asInt();
         if (x >= 0)
-            ProcStep(x, y, -currBotColor); // Ä£Äâ¶Ô·½Âä×Ó
+            ProcStep(x, y, -currBotColor); // æ¨¡æ‹Ÿå¯¹æ–¹è½å­
         x = input["responses"][i]["x"].asInt();
         y = input["responses"][i]["y"].asInt();
         if (x >= 0)
-            ProcStep(x, y, currBotColor); // Ä£Äâ¼º·½Âä×Ó
+            ProcStep(x, y, currBotColor); // æ¨¡æ‹Ÿå·±æ–¹è½å­
     }
 
-    // ¿´¿´Íæ¼Ò±¾»ØºÏÊäÈë
+    // çœ‹çœ‹ç©å®¶æœ¬å›åˆè¾“å…¥
     x = input["requests"][turnID]["x"].asInt();
     y = input["requests"][turnID]["y"].asInt();
     //cout<<x<<y<<endl;
     if (x >= 0)
-        ProcStep(x, y, -currBotColor); // Ä£Äâ¶Ô·½Âä×Ó
+        ProcStep(x, y, -currBotColor); // æ¨¡æ‹Ÿå¯¹æ–¹è½å­
 
-    // ×ö³ö¾ö²ß£¨ÄãÖ»ĞèĞŞ¸ÄÒÔÏÂ²¿·Ö£©
+    // åšå‡ºå†³ç­–ï¼ˆä½ åªéœ€ä¿®æ”¹ä»¥ä¸‹éƒ¨åˆ†ï¼‰
     int resultX=-1, resultY=-1;
     UCTreeNode tree;
-    tree.init(); //µ±Ç°Æå¾ÖdownÏÂÀ´
+    tree.init(); //å½“å‰æ£‹å±€å½“ä¸‹æ¥
+    //draw(tree.board);
     tree.expand();
-    draw(tree.board);
-    cout<<tree.childNum;
-    if(tree.childNum!=0){
-    while(1) {
-        int ms=clock()%CLOCKS_PER_SEC*1000/CLOCKS_PER_SEC;
-        if(ms>970)
-            break;
-        tree.iterate();
-    }
-    int bestAction = tree.bestAction();
-    resultX=tree.vpChildren_i[bestAction]->xPos;
-    resultY=tree.vpChildren_i[bestAction]->yPos;
+    if(tree.childNum!=0){   //å¦‚æœç­‰äº0å°±ä¼šè·³è¿‡è¯¥å±€
+        int i=0;
+        while(1) {
+            int ms=clock()%CLOCKS_PER_SEC*1000/CLOCKS_PER_SEC;
+            if(ms>900)
+                break;
+            //cout<<"i:"<<i++<<endl;
+            tree.iterate();
+            //cout<<endl;
+
+        }
+
+        //cout<<endl;
+        int bestAction = tree.bestAction();
+        resultX=tree.vpChildren_i[bestAction]->xPos;
+        resultY=tree.vpChildren_i[bestAction]->yPos;
     }
 
-    // ¾ö²ß½áÊø£¬Êä³ö½á¹û£¨ÄãÖ»ĞèĞŞ¸ÄÒÔÉÏ²¿·Ö£©
+    // å†³ç­–ç»“æŸï¼Œè¾“å‡ºç»“æœï¼ˆä½ åªéœ€ä¿®æ”¹ä»¥ä¸Šéƒ¨åˆ†ï¼‰
 
     Json::Value ret;
     ret["response"]["x"] = resultX;
     ret["response"]["y"] = resultY;
     Json::FastWriter writer;
-    cout << writer.write(ret) << endl; //ÕâÊÇµçÄÔÉÏµÄ¾ö¶¨
+    cout << writer.write(ret) << endl; //è¿™æ˜¯ç”µè„‘ä¸Šçš„å†³å®š
 
     return 0;
 }
+
